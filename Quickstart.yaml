@@ -109,7 +109,7 @@
       password: '{{ vcenter_password }}'
       validate_certs: no
       esxi_hostname: '{{ item.esxi_host }}'
-      vswitch_name: '{{ DSwitch_name }}'
+      dvswitch_name: '{{ DSwitch_name }}'
       portgroup_name: '{{ item.portgroup }}'
       network:
         type: 'static'
