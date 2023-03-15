@@ -155,9 +155,9 @@
       vmotion:
         gateway: '{{ item.vmotion_gateway }}'        
     with_items:
-    - { esxi_host: sb-esxi-01.vclass.local, vmotion_gateway: 10.10.22.1 }
-    - { esxi_host: sb-esxi-02.vclass.local, vmotion_gateway: 10.10.22.1 }
-    - { esxi_host: sb-esxi-03.vclass.local, vmotion_gateway: 10.10.22.1 }
+    - { esxi_host: 10.10.20.11, vmotion_gateway: 10.10.22.1 }
+    - { esxi_host: 10.10.20.11, vmotion_gateway: 10.10.22.1 }
+    - { esxi_host: 10.10.20.11, vmotion_gateway: 10.10.22.1 }
     delegate_to: localhost
 
   - name: 10.Create Software iSCSI Adapter
@@ -191,39 +191,37 @@
       - "10.10.20.12"
     delegate_to: localhost
 
-
-    - name: 10.Recan HBA for cluster
-      community.vmware.vmware_host_scanhba:
-        hostname: '{{ vcenter_hostname }}'
-        username: '{{ vcenter_username }}'
-        password: '{{ vcenter_password }}'
-        validate_certs: no
-        cluster_name: '{{ cluster_name }}'
-        rescan_hba: true
+  - name: 10.Recan HBA for cluster
+    community.vmware.vmware_host_scanhba:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+      cluster_name: '{{ cluster_name }}'
+      rescan_hba: true
       delegate_to: localhost
 
 
-    - name: 11.Wait for complete rescan HBA
-      wait_for:
-        timeout: 10
-      delegate_to: localhost
+  - name: 11.Wait for complete rescan HBA
+    wait_for:
+      timeout: 10
+    delegate_to: localhost
 
 
-    - name: 12.Mount iSCSI-01 datastore
-      community.vmware.vmware_host_datastore:
-        hostname: '{{ vcenter_hostname }}'
-        username: '{{ vcenter_username }}'
-        password: '{{ vcenter_password }}'
-        validate_certs: no
-        datastore_name: 'iSCSI-Horizon'
-        datastore_type: 'vmfs'
-        vmfs_device_name: 'naa.60003ff44dc75adc881b96b330bc1bdc'
-        vmfs_version: 6
-        esxi_hostname: '{{ item }}'
-        state: present
-      loop:
-        - "sa-esxi-01.vclass.local"
-        - "sa-esxi-02.vclass.local"
-        - "sa-esxi-03.vclass.local"
-      delegate_to: localhost
-
+  - name: 12.Mount iSCSI-01 datastore
+    community.vmware.vmware_host_datastore:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+      datastore_name: 'iSCSI-0'
+      datastore_type: 'vmfs'
+      vmfs_device_name: 'naa.60003ff44dc75adc99b216de6a3881cf'
+      vmfs_version: 6
+      esxi_hostname: '{{ item }}'
+      state: present
+    loop:
+      - "10.10.20.11"
+      - "10.10.20.12"
+      - "10.10.20.13"
+    delegate_to: localhost
