@@ -206,7 +206,7 @@
     loop:
       - "10.10.20.11"
       - "10.10.20.12"
-      - "10.10.20.12"
+      - "10.10.20.13"
     delegate_to: localhost
 
   - name: 10.Recan HBA for cluster
@@ -215,10 +215,14 @@
       username: '{{ vcenter_username }}'
       password: '{{ vcenter_password }}'
       validate_certs: no
-      cluster_name: '{{ cluster_name }}'
+      esxi_hostname: '{{ item }}'
+      rescan_vmfs: true
       rescan_hba: true
-      delegate_to: localhost
-
+    loop:
+      - "10.10.20.11"
+      - "10.10.20.12"
+      - "10.10.20.13"      
+    delegate_to: localhost
 
   - name: 11.Wait for complete rescan HBA
     wait_for:
