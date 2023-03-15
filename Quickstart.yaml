@@ -97,11 +97,27 @@
       state: present
     with_items:
     - { portgroup: DPG-SB-Mgmt,    vlanid: 20 }
-    - { portgroup: DPG-SB-Storage, vlanid: 21 }    
     - { portgroup: DPG-SB-vMotion, vlanid: 22 }
     - { portgroup: DPG-SB-Prod,    vlanid: 23 }
     delegate_to: localhost
 
+  - name: 06.Create vlan portgroups
+    community.vmware.vmware_dvs_portgroup:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no        
+      portgroup_name: '{{ item.portgroup }}'
+      switch_name: '{{ DSwitch_name }}'
+      vlan_id: '{{ item.vlanid }}'
+      port_binding: static      
+      state: present      
+      teaming_policy:
+        active_uplinks: Uplink 1       
+    with_items:
+    - { portgroup: DPG-SB-Storage, vlanid: 21 }    
+    delegate_to: localhost
+    
   - name: 07.Add iSCSI vmkernel port
     community.vmware.vmware_vmkernel:
       hostname: '{{ vcenter_hostname }}'
