@@ -1,0 +1,176 @@
+---
+- name : vSphere Quick Start
+  hosts: localhost
+
+  vars:
+    ansible_python_interpreter: /bin/python3
+    vcenter_hostname: "10.10.10.10"
+    vcenter_username: "administrator@vsphere.local"
+    vcenter_password: "VMware1!"
+    datacenter_name: "Datacenter_by_Ansible"
+    cluster_name: "vSphere_by_Ansible"
+    esxi_username: "root"
+    esxi_password: "VMware1!"
+    DSwitch_name: "DSwitch_SiteB"
+
+  tasks: 
+  - name: 01.Create Datacenter
+    community.vmware.vmware_datacenter:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+      datacenter_name: '{{ datacenter_name }}'
+      state: present
+    delegate_to: localhost
+
+  - name: 02.Create Cluster
+    community.vmware.vmware_cluster:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+      datacenter_name: '{{ datacenter_name }}'
+      cluster_name: '{{ cluster_name }}'
+    delegate_to: localhost
+
+
+  - name: 03.Add ESXi Host to vCenter
+    community.vmware.vmware_host:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+      datacenter_name: '{{ datacenter_name }}'
+      cluster_name: '{{ cluster_name }}'
+      esxi_hostname: '{{ item }}'
+      esxi_username: 'root'
+      esxi_password: 'VMware1!'
+      state: present
+    loop:
+      - "10.10.20.11"
+      - "10.10.20.12"
+      - "10.10.20.13"
+    delegate_to: localhost
+
+  - name: 04.Create dvSwitch
+    community.vmware.vmware_dvswitch:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+      datacenter: '{{ datacenter_name }}'
+      switch: '{{ DSwitch_name }}'
+      version: 7.0.3
+      uplink_quantity: 2
+      state: present
+    delegate_to: localhost
+
+  - name: 05.Add Host to dVS
+    community.vmware.vmware_dvs_host:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no        
+      esxi_hostname: '{{ item }}'
+      switch_name: '{{ DSwitch_name }}'
+      vmnics:
+        - vmnic2
+        - vmnic3
+      state: present
+    loop:
+      - "10.10.20.11"
+      - "10.10.20.12"
+      - "10.10.20.13"
+    delegate_to: localhost
+
+  - name: 06.Create vlan portgroups
+    community.vmware.vmware_dvs_portgroup:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no        
+      portgroup_name: '{{ item.portgroup }}'
+      switch_name: '{{ DSwitch_name }}'
+      vlan_id: '{{ item.vlanid }}'
+      port_binding: static
+      state: present
+    with_items:
+    - { portgroup: DPG-SB-Mgmt,    vlanid: 20 }
+    - { portgroup: DPG-SB-Storage, vlanid: 21 }    
+    - { portgroup: DPG-SB-vMotion, vlanid: 22 }
+    - { portgroup: DPG-SB-Prod,    vlanid: 23 }
+    delegate_to: localhost
+
+  - name: 07.Add iSCSI vmkernel port
+    community.vmware.vmware_vmkernel:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+      esxi_hostname: '{{ item.esxi_host }}'
+      vswitch_name: '{{ DSwitch_name }}'
+      portgroup_name: '{{ item.portgroup }}'
+      network:
+        type: 'static'
+        ip_address: '{{ item.iscsi_ip }}'
+        subnet_mask: 255.255.255.0
+        default_gateway: 10.10.21.1
+      state: present
+    with_items:
+    - { esxi_host: 10.10.20.11, portgroup: DPG-SB-Storage, iscsi_ip: 10.10.21.11 }
+    - { esxi_host: 10.10.20.12, portgroup: DPG-SB-Storage, iscsi_ip: 10.10.21.12 }
+    - { esxi_host: 10.10.20.13, portgroup: DPG-SB-Storage, iscsi_ip: 10.10.21.13 }
+    delegate_to: localhost
+
+  - name: 08.Add vMotion vmkernel port
+    community.vmware.vmware_vmkernel:
+      hostname: '{{ vcenter_hostname }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+      esxi_hostname: '{{ item.esxi_host }}'
+      dvswitch_name: DSwitch
+      portgroup_name: '{{ item.portgroup }}' 
+      network:
+        type: 'static'
+        ip_address: '{{ item.vmotionip }}'
+        subnet_mask: 255.255.255.0
+        tcpip_stack: vmotion
+      state: present
+      enable_vmotion: yes
+    with_items:
+    - { esxi_host: sb-esxi-01.vclass.local, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.11 }
+    - { esxi_host: sb-esxi-02.vclass.local, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.12 }
+    - { esxi_host: sb-esxi-03.vclass.local, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.13 }
+    delegate_to: localhost
+
+  - name: 09.vMotion tcp/ip stack gateway
+    community.vmware.vmware_host_tcpip_stacks:
+      hostname: '{{ item.esxi_host }}'
+      username: '{{ esxi_username }}'
+      password: '{{ esxi_password }}'
+      validate_certs: no
+      esxi_hostname: '{{ item.esxi_host }}'
+      vmotion:
+        gateway: '{{ item.vmotion_gateway }}'        
+    with_items:
+    - { esxi_host: sb-esxi-01.vclass.local, vmotion_gateway: 10.10.22.1 }
+    - { esxi_host: sb-esxi-02.vclass.local, vmotion_gateway: 10.10.22.1 }
+    - { esxi_host: sb-esxi-03.vclass.local, vmotion_gateway: 10.10.22.1 }
+    delegate_to: localhost
+
+  - name: 10.Create Software iSCSI Adapter
+    community.vmware.vmware_host_iscsi:
+      hostname: "{{ vcenter_hostname }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
+      validate_certs: no
+      esxi_hostname: "{{ item }}"
+      state: enabled
+    loop:
+      - "10.10.20.11"
+      - "10.10.20.12"
+      - "10.10.20.13"
+    delegate_to: localhost
+
