@@ -147,9 +147,9 @@
 
   - name: 09.vMotion tcp/ip stack gateway
     community.vmware.vmware_host_tcpip_stacks:
-      hostname: '{{ item }}'
-      username: '{{ esxi_username }}'
-      password: '{{ esxi_password }}'
+      hostname: "{{ vcenter_hostname }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
       validate_certs: no
       esxi_hostname: '{{ item }}'
       vmotion:
