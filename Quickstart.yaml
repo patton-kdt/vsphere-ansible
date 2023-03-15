@@ -199,6 +199,8 @@
       esxi_hostname: "{{ item }}"
       iscsi_config:
         vmhba_name: vmhba65
+        port_bind:
+          - vmk1
         send_target:
           address: 10.10.10.2
     loop:
