@@ -140,9 +140,9 @@
       state: present
       enable_vmotion: yes
     with_items:
-    - { esxi_host: sb-esxi-01.vclass.local, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.11 }
-    - { esxi_host: sb-esxi-02.vclass.local, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.12 }
-    - { esxi_host: sb-esxi-03.vclass.local, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.13 }
+    - { esxi_host: 10.10.20.11, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.11 }
+    - { esxi_host: 10.10.20.11, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.12 }
+    - { esxi_host: 10.10.20.11, portgroup: DPG-SB-vMotion, vmotionip: 10.10.22.13 }
     delegate_to: localhost
 
   - name: 09.vMotion tcp/ip stack gateway
